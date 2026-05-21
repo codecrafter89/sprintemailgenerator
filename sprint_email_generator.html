@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprint Email Generator</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --orange: #c00d0d;
+      --orange-light: #ef1111;
+      --dark: #1A1A2E;
+      --panel: #F5F2EE;
+      --border: #D9D0C5;
+      --text: #2D2A26;
+      --muted: #8A847C;
+      --white: #FFFFFF;
+      --green: #2E7D5E;
+      --red: #C0392B;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      flex: 1;
+      min-height: 0;
+      height: calc(100vh - 72px - 48px);
+      /* minus header and history bar */
+    }
+
+    header {
+      background: var(--orange);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    header .logo {
+      width: 25px;
+      height: 25px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+    }
+
+    header h1 {
+      color: var(--white);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    header span {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      margin-left: auto;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      flex: 1;
+      height: calc(100vh - 72px);
+    }
+
+    /* LEFT PANEL - Form */
+    .form-panel {
+      background: var(--panel);
+      overflow-y: auto;
+      padding: 28px 28px 40px;
+      border-right: 2px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--orange);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: var(--orange);
+      border-radius: 2px;
+    }
+
+    .sprint-meta {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .field-row.single {
+      grid-template-columns: 1fr;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--orange);
+    }
+
+    /* Tables */
+    .table-wrapper {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .table-inner {
+      overflow-x: auto;
+    }
+
+    table.entry-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.entry-table th {
+      background: var(--orange);
+      color: var(--white);
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    table.entry-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    table.entry-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.entry-table tr:nth-child(even) td {
+      background: #FAF8F6;
+    }
+
+    table.entry-table input,
+    table.entry-table select {
+      padding: 5px 7px;
+      font-size: 12px;
+      border-radius: 5px;
+    }
+
+    .add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--white);
+      border: 1.5px dashed var(--border);
+      border-radius: 7px;
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin: 10px 12px 12px;
+    }
+
+    .add-btn:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: #FFF6F0;
+    }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+
+    .del-btn:hover {
+      color: var(--red);
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--orange);
+      color: var(--white);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.2px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .generate-btn:hover {
+      background: var(--orange-light);
+      transform: translateY(-1px);
+    }
+
+    .generate-btn:active {
+      transform: translateY(0);
+    }
+
+    /* RIGHT PANEL - Preview */
+    .preview-panel {
+      background: #ECEAE6;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-toolbar {
+      background: var(--dark);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .preview-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.5);
+      font-family: 'DM Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .copy-btn {
+      padding: 8px 18px;
+      background: var(--orange);
+      color: var(--white);
+      border: none;
+      border-radius: 7px;
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .copy-btn:hover {
+      background: var(--orange-light);
+    }
+
+    .copy-btn.copied {
+      background: var(--green);
+    }
+
+    .email-container {
+      flex: 1;
+      padding: 24px;
+    }
+
+    .email-card {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Email styles (mimic the original) */
+    .email-body {
+      padding: 24px 28px;
+      font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: rgb(31, 73, 125);
+    }
+
+    .email-intro {
+      margin-bottom: 20px;
+      font-size: 11pt;
+      font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+      color: rgb(31, 73, 125);
+    }
+
+    .email-intro strong {
+      color: rgb(31, 73, 125);
+      font-weight: bold;
+    }
+
+    .email-section-title {
+      font-size: 11pt;
+      font-weight: bold;
+      text-decoration: underline;
+      margin-bottom: 10px;
+      font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+      color: rgb(31, 73, 125);
+    }
+
+    .email-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 28px;
+      font-size: 11pt;
+      font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+      color: rgb(31, 73, 125);
+    }
+
+    .email-table th {
+      background: var(--orange);
+      color: var(--white);
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: bold;
+      border: 1px solid #C0520A;
+    }
+
+    .email-table td {
+      padding: 8px 10px;
+      border: 1px solid #DDD;
+      vertical-align: top;
+      color: rgb(31, 73, 125);
+      font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+      font-size: 11pt;
+    }
+
+    .email-table tr:nth-child(even) td {
+      background: #FFF8F4;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-completed {
+      background: #E6F7EE;
+      color: #2E7D5E;
+    }
+
+    .status-inprogress {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: var(--muted);
+      gap: 12px;
+    }
+
+    .placeholder svg {
+      opacity: 0.3;
+    }
+
+    .placeholder p {
+      font-size: 14px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* ── History Panel ──────────────────────────────────────────── */
+    .history-bar {
+      background: #13132A;
+      border-top: 2px solid rgba(255, 255, 255, 0.07);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      min-height: 44px;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .history-label {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: rgba(255, 255, 255, 0.35);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .history-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 6px 0;
+    }
+
+    .history-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 10px 4px 12px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.7);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .history-chip:hover {
+      background: rgba(232, 96, 10, 0.25);
+      border-color: var(--orange);
+      color: #fff;
+    }
+
+    .history-chip .chip-dl {
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 1px 5px;
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+
+    .history-chip .chip-dl:hover {
+      background: var(--orange);
+      color: #fff;
+    }
+
+    .history-chip .chip-del {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .history-chip .chip-del:hover {
+      color: var(--red);
+    }
+
+    .no-history {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: rgba(255, 255, 255, 0.2);
+      font-style: italic;
+    }
+
+    /* ── Toast notification ─────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1E1E3A;
+      border: 1px solid rgba(232, 96, 10, 0.4);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-family: 'Sora', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">📋</div>
+    <h1>Sprint Email Generator</h1>
+    <span>Auto-format</span>
+  </header>
+
+  <div class="app">
+
+    <!-- LEFT: INPUT FORM -->
+    <div class="form-panel">
+
+      <!-- Sprint Period -->
+      <div class="sprint-meta">
+        <div class="section-title" style="margin-bottom:14px;">Sprint Periods</div>
+        <div class="field-row">
+          <div>
+            <label>Sprint 1 — Start</label>
+            <input type="date" id="s1start">
+          </div>
+          <div>
+            <label>Sprint 1 — End</label>
+            <input type="date" id="s1end">
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>Sprint 2 — Start</label>
+            <input type="date" id="s2start">
+          </div>
+          <div>
+            <label>Sprint 2 — End</label>
+            <input type="date" id="s2end">
+          </div>
+        </div>
+      </div>
+
+      <!-- Stories -->
+      <div class="section-header">
+        <div class="section-title">Stories Details</div>
+      </div>
+      <div class="table-wrapper">
+        <div class="table-inner">
+          <table class="entry-table" id="storiesTable">
+            <thead>
+              <tr>
+                <th>Sprint</th>
+                <th colspan="2">PBI ID &amp; Title <span style="font-weight:400;opacity:0.85">— paste full string above,
+                    or type below</span></th>
+                <th>Status</th>
+                <th>Planned</th>
+                <th>Delivered</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="storiesBody"></tbody>
+          </table>
+        </div>
+        <button class="add-btn" onclick="addStory()">＋ Add Story</button>
+      </div>
+
+      <!-- Bugs -->
+      <div class="section-header">
+        <div class="section-title">Bug Details</div>
+      </div>
+      <div class="table-wrapper">
+        <div class="table-inner">
+          <table class="entry-table" id="bugsTable">
+            <thead>
+              <tr>
+                <th>Sprint</th>
+                <th colspan="2">Bug ID &amp; Title <span style="font-weight:400;opacity:0.85">— paste full string above,
+                    or type below</span></th>
+                <th>Status</th>
+                <th>Defect by you?</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="bugsBody"></tbody>
+          </table>
+        </div>
+        <button class="add-btn" onclick="addBug()">＋ Add Bug</button>
+      </div>
+
+      <button class="generate-btn" onclick="generateEmail()">⚡ Generate Email Content</button>
+    </div>
+
+    <!-- RIGHT: PREVIEW -->
+    <div class="preview-panel">
+      <div class="preview-toolbar">
+        <span class="preview-label">📧 Email Preview</span>
+        <button class="copy-btn" id="copyBtn" onclick="copyEmail()">
+          <span>📋</span> Copy Email
+        </button>
+      </div>
+      <div class="email-container">
+        <div id="emailPreview">
+          <div class="placeholder">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+              <rect x="5" y="12" width="50" height="36" rx="4" stroke="#999" stroke-width="2.5" />
+              <path d="M5 18L30 34L55 18" stroke="#999" stroke-width="2.5" />
+            </svg>
+            <p>Fill in details → Generate Email</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Export History Bar ───────────────────────────────────── -->
+  <div class="history-bar">
+    <span class="history-label">📁 Saved exports</span>
+    <div class="history-chips" id="historyChips">
+      <span class="no-history" id="noHistoryMsg">No exports yet — hit Generate Email Content to save</span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let sprintLabels = ['Sprint 1', 'Sprint 2'];
+
+    function getSprintLabel(idx) {
+      const s1s = document.getElementById('s1start').value;
+      const s1e = document.getElementById('s1end').value;
+      const s2s = document.getElementById('s2start').value;
+      const s2e = document.getElementById('s2end').value;
+      if (idx == 0 && s1s && s1e) return fmtRange(s1s, s1e);
+      if (idx == 1 && s2s && s2e) return fmtRange(s2s, s2e);
+      return idx == 0 ? 'Sprint 1' : 'Sprint 2';
+    }
+
+    function fmtDate(d) {
+      if (!d) return '';
+      const dt = new Date(d + 'T00:00:00');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${dt.getDate()}-${months[dt.getMonth()]}-${dt.getFullYear()}`;
+    }
+
+    function fmtRange(s, e) { return `${fmtDate(s)} to ${fmtDate(e)}`; }
+
+    function sprintSelect(name) {
+      return `<select name="${name}" style="min-width:90px">
+      <option value="0">Sprint 1</option>
+      <option value="1">Sprint 2</option>
+    </select>`;
+    }
+
+    function statusSelect(name) {
+      return `<select name="${name}" style="min-width:110px">
+      <option value="Completed">Completed</option>
+      <option value="Dev In-progress">Dev In-progress</option>
+       <option value="On-Hold">On-Hold</option>
+    </select>`;
+    }
+
+    function parsePastedID(raw) {
+      // Splits "PBI 337588: Some title here" → { id: "PBI 337588", title: "Some title here" }
+      // Works for any prefix: Bug, PBI, SPIKE, etc.
+      const colonIdx = raw.indexOf(':');
+      if (colonIdx === -1) return { id: '', title: raw.trim() };
+      return {
+        id: raw.slice(0, colonIdx).trim(),
+        title: raw.slice(colonIdx + 1).trim()
+      };
+    }
+
+    function autoPasteStory(input) {
+      const val = input.value;
+      if (!val.includes(':')) return;
+      const { id, title } = parsePastedID(val);
+      const tr = input.closest('tr');
+      tr.querySelector('[name="pbiId"]').value = id;
+      tr.querySelector('[name="title"]').value = title;
+      input.value = '';
+      input.placeholder = 'Paste again or clear';
+      // flash green feedback
+      tr.querySelector('[name="pbiId"]').style.borderColor = '#2E7D5E';
+      tr.querySelector('[name="title"]').style.borderColor = '#2E7D5E';
+      setTimeout(() => {
+        tr.querySelector('[name="pbiId"]').style.borderColor = '';
+        tr.querySelector('[name="title"]').style.borderColor = '';
+      }, 1200);
+    }
+
+    function autoPasteBug(input) {
+      const val = input.value;
+      if (!val.includes(':')) return;
+      const { id, title } = parsePastedID(val);
+      const tr = input.closest('tr');
+      tr.querySelector('[name="bugId"]').value = id;
+      tr.querySelector('[name="title"]').value = title;
+      input.value = '';
+      input.placeholder = 'Paste again or clear';
+      tr.querySelector('[name="bugId"]').style.borderColor = '#2E7D5E';
+      tr.querySelector('[name="title"]').style.borderColor = '#2E7D5E';
+      setTimeout(() => {
+        tr.querySelector('[name="bugId"]').style.borderColor = '';
+        tr.querySelector('[name="title"]').style.borderColor = '';
+      }, 1200);
+    }
+
+    function addStory() {
+      const tbody = document.getElementById('storiesBody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+      <td>${sprintSelect('sprint')}</td>
+      <td colspan="2" style="padding:4px 6px;">
+        <input type="text" name="pasteStory" placeholder="✦ Paste full: PBI XXXXXX: Story title here"
+          style="width:100%;font-style:italic;background:#FFFBF5;border-color:#F0C070;"
+          onpaste="setTimeout(()=>autoPasteStory(this),10)"
+          oninput="autoPasteStory(this)">
+        <div style="display:flex;gap:6px;margin-top:5px;">
+          <input type="text" name="pbiId" placeholder="PBI ID" style="width:100px;font-style:normal;">
+          <input type="text" name="title" placeholder="Title" style="flex:1;font-style:normal;">
+        </div>
+      </td>
+      <td>${statusSelect('status')}</td>
+      <td><input type="text" name="planned" placeholder="0" style="width:40px;text-align:center"></td>
+      <td><input type="text" name="delivered" placeholder="0" style="width:40px;text-align:center"></td>
+      <td><textarea id="notes" name="notes" rows="2" cols="50" style="width:90px"></textarea></td>
+      <td><button class="del-btn" onclick="this.closest('tr').remove()">✕</button></td>
+    `;
+      tbody.appendChild(tr);
+    }
+
+    function addBug() {
+      const tbody = document.getElementById('bugsBody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+      <td>${sprintSelect('sprint')}</td>
+      <td colspan="2" style="padding:4px 6px;">
+        <input type="text" name="pasteBug" placeholder="✦ Paste full: Bug XXXXXX: Bug title here"
+          style="width:100%;font-style:italic;background:#FFFBF5;border-color:#F0C070;"
+          onpaste="setTimeout(()=>autoPasteBug(this),10)"
+          oninput="autoPasteBug(this)">
+        <div style="display:flex;gap:6px;margin-top:5px;">
+          <input type="text" name="bugId" placeholder="Bug ID" style="width:100px;font-style:normal;">
+          <input type="text" name="title" placeholder="Title" style="flex:1;font-style:normal;">
+        </div>
+      </td>
+      <td>${statusSelect('status')}</td>
+      <td><select name="defect" style="min-width:60px"><option value="N">N</option><option value="Y">Y</option></select></td>
+      <td><textarea id="notes" name="notes" rows="2" cols="50" style="width:100px"></textarea></td>
+      <td><button class="del-btn" onclick="this.closest('tr').remove()">✕</button></td>
+    `;
+      tbody.appendChild(tr);
+    }
+
+    function getTableData(tbodyId, fields) {
+      const rows = document.getElementById(tbodyId).querySelectorAll('tr');
+      return Array.from(rows).map(tr => {
+        const obj = {};
+        fields.forEach(f => {
+          const el = tr.querySelector(`[name="${f}"]`);
+          obj[f] = el ? el.value : '';
+        });
+        return obj;
+      });
+    }
+
+    function statusBadge(s) {
+      const cls = s === 'Completed' ? 'status-completed' : 'status-inprogress';
+      return `<span class="status-pill ${cls}">${s}</span>`;
+    }
+
+    // ── Toast ────────────────────────────────────────────────────────────────
+    function showToast(msg, icon = '✅') {
+      const t = document.getElementById('toast');
+      t.innerHTML = `<span>${icon}</span> ${msg}`;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── File naming ──────────────────────────────────────────────────────────
+    function buildFileName(s2s, s2e, s1s, s1e) {
+      // Primary name based on latest sprint end date
+      // Format: Sprint_22Apr2026-5May2026_saved21May2026_1430.xlsx
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const savedStamp = `${now.getDate()}${months[now.getMonth()]}${now.getFullYear()}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+
+      const sprintPart = (s2s && s2e)
+        ? `${fmtDate(s2s).replace(/-/g, '')}-${fmtDate(s2e).replace(/-/g, '')}`
+        : (s1s && s1e)
+          ? `${fmtDate(s1s).replace(/-/g, '')}-${fmtDate(s1e).replace(/-/g, '')}`
+          : 'Sprint-Unknown';
+
+      return `Sprint_${sprintPart}_saved${savedStamp}.xlsx`;
+    }
+
+    // ── Excel export (SheetJS) ────────────────────────────────────────────────
+    function exportToExcel(stories, bugs, s1, s2, s1s, s1e, s2s, s2e, fileName) {
+      const wb = XLSX.utils.book_new();
+
+      // ── Sheet 1: Stories ──────────────────────────────────────────
+      const storyHeaders = [
+        'Sprint Date', 'PBI ID', 'Title',
+        'Status', 'Story Points (Planned)', 'Story Points (Delivered)', 'Additional Details'
+      ];
+      const storyRows = stories.map(r => [
+        r.sprint == 0 ? s1 : s2,
+        r.pbiId, r.title, r.status,
+        r.planned ? Number(r.planned) : '',
+        r.delivered ? Number(r.delivered) : '',
+        r.notes || ''
+      ]);
+
+      const wsStories = XLSX.utils.aoa_to_sheet([storyHeaders, ...storyRows]);
+
+      // Style column widths
+      wsStories['!cols'] = [
+        { wch: 26 }, { wch: 14 }, { wch: 60 },
+        { wch: 20 }, { wch: 22 }, { wch: 24 }, { wch: 30 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsStories, 'Stories');
+
+      // ── Sheet 2: Bugs ─────────────────────────────────────────────
+      const bugHeaders = [
+        'Sprint Date', 'Bug ID', 'Title',
+        'Status', 'Defect By You? (Y/N)', 'Additional Details'
+      ];
+      const bugRows = bugs.map(r => [
+        r.sprint == 0 ? s1 : s2,
+        r.bugId, r.title, r.status,
+        r.defect, r.notes || ''
+      ]);
+
+      const wsBugs = XLSX.utils.aoa_to_sheet([bugHeaders, ...bugRows]);
+      wsBugs['!cols'] = [
+        { wch: 26 }, { wch: 14 }, { wch: 60 },
+        { wch: 20 }, { wch: 22 }, { wch: 30 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsBugs, 'Bugs');
+
+      // ── Sheet 3: Summary ──────────────────────────────────────────
+      const now = new Date();
+      const summaryData = [
+        ['Sprint Email Report — Summary'],
+        [],
+        ['Generated on', now.toLocaleString()],
+        ['File name', fileName],
+        [],
+        ['Sprint 1 Period', s1s && s1e ? fmtRange(s1s, s1e) : '—'],
+        ['Sprint 2 Period', s2s && s2e ? fmtRange(s2s, s2e) : '—'],
+        [],
+        ['Total Stories', stories.length],
+        ['Stories Completed', stories.filter(r => r.status === 'Completed').length],
+        ['Total Story Points Planned', stories.reduce((a, r) => a + (Number(r.planned) || 0), 0)],
+        ['Total Story Points Delivered', stories.reduce((a, r) => a + (Number(r.delivered) || 0), 0)],
+        [],
+        ['Total Bugs', bugs.length],
+        ['Bugs Completed', bugs.filter(r => r.status === 'Completed').length],
+        ['Defects Caused By Dev', bugs.filter(r => r.defect === 'Y').length],
+      ];
+
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      wsSummary['!cols'] = [{ wch: 32 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+      // ── Download ──────────────────────────────────────────────────
+      XLSX.writeFile(wb, fileName);
+    }
+
+    // ── History (localStorage) ────────────────────────────────────────────────
+    const HISTORY_KEY = 'sprint_email_history';
+
+    function loadHistory() {
+      try {
+        return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      } catch { return []; }
+    }
+
+    function saveHistory(history) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    function addHistoryEntry(entry) {
+      const history = loadHistory();
+      history.unshift(entry); // newest first
+      if (history.length > 20) history.pop(); // keep last 20
+      saveHistory(history);
+      renderHistory();
+    }
+
+    function deleteHistoryEntry(id) {
+      const history = loadHistory().filter(e => e.id !== id);
+      saveHistory(history);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const chips = document.getElementById('historyChips');
+      const noMsg = document.getElementById('noHistoryMsg');
+      const history = loadHistory();
+
+      if (history.length === 0) {
+        chips.innerHTML = '<span class="no-history" id="noHistoryMsg">No exports yet — hit Generate Email Content to save</span>';
+        return;
+      }
+
+      chips.innerHTML = history.map(e => `
+      <div class="history-chip" title="Sprint periods: ${e.sprintLabel}">
+        <span>📊</span>
+        <span><strong>${e.fileName.replace('.xlsx', '')}</strong></span>
+        <button class="chip-dl" onclick="redownload('${e.id}')" title="Re-download Excel">⬇</button>
+        <button class="chip-del" onclick="deleteHistoryEntry('${e.id}')" title="Remove from history">✕</button>
+      </div>
+    `).join('');
+    }
+
+    function redownload(id) {
+      const entry = loadHistory().find(e => e.id === id);
+      if (!entry) return showToast('Entry not found', '⚠️');
+      exportToExcel(
+        entry.stories, entry.bugs,
+        entry.s1, entry.s2,
+        entry.s1s, entry.s1e, entry.s2s, entry.s2e,
+        entry.fileName
+      );
+      showToast(`Re-downloading ${entry.fileName}`, '📥');
+    }
+
+    function generateEmail() {
+      const s1 = getSprintLabel(0);
+      const s2 = getSprintLabel(1);
+
+      const stories = getTableData('storiesBody', ['sprint', 'pbiId', 'title', 'status', 'planned', 'delivered', 'notes']);
+      const bugs = getTableData('bugsBody', ['sprint', 'bugId', 'title', 'status', 'defect', 'notes']);
+
+      // Build intro
+      const s1s = document.getElementById('s1start').value;
+      const s1e = document.getElementById('s1end').value;
+      const s2s = document.getElementById('s2start').value;
+      const s2e = document.getElementById('s2end').value;
+
+      let introText = 'Below are the details for the last 2 Sprints';
+      const periods = [];
+      if (s1s && s1e) periods.push(`<strong>${fmtRange(s1s, s1e)}</strong>`);
+      if (s2s && s2e) periods.push(`<strong>${fmtRange(s2s, s2e)}</strong>`);
+      if (periods.length) introText += ` (Period: ${periods.join(' and ')})`;
+      introText += ' as required.';
+
+      // Build stories rows
+      let storiesRows = '';
+      stories.forEach(r => {
+        const spLabel = r.sprint == 0 ? s1 : s2;
+        storiesRows += `<tr>
+        <td>${spLabel}</td>
+        <td>${r.pbiId}</td>
+        <td>${r.title}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td style="text-align:center">${r.planned}</td>
+        <td style="text-align:center">${r.delivered}</td>
+        <td>${r.notes || '—'}</td>
+      </tr>`;
+      });
+
+      // Build bugs rows
+      let bugsRows = '';
+      bugs.forEach(r => {
+        const spLabel = r.sprint == 0 ? s1 : s2;
+        const defectStyle = r.defect === 'Y'
+          ? 'style="text-align:center;color:#C0392B;font-weight:700"'
+          : 'style="text-align:center"';
+        bugsRows += `<tr>
+        <td>${spLabel}</td>
+        <td>${r.bugId}</td>
+        <td>${r.title}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td ${defectStyle}>${r.defect}</td>
+        <td>${r.notes || '—'}</td>
+      </tr>`;
+      });
+
+      const html = `
+<div class="email-card">
+  <div class="email-body">
+    <p class="email-intro">${introText}</p>
+
+    <p class="email-section-title">Stories Details:</p>
+    <table class="email-table">
+      <thead>
+        <tr>
+          <th>Sprint Date</th>
+          <th>PBI ID</th>
+          <th>Title</th>
+          <th>Status<br><small>(Dev In-progress or Completed)</small></th>
+          <th>Story Points<br><small>(Planned)</small></th>
+          <th>Story Points<br><small>(Delivered)</small></th>
+          <th>Additional details<br><small>(if any)</small></th>
+        </tr>
+      </thead>
+      <tbody>${storiesRows || '<tr><td colspan="7" style="text-align:center;color:#999;padding:16px">No stories added</td></tr>'}</tbody>
+    </table>
+
+    <p class="email-section-title">Bug Details:</p>
+    <table class="email-table">
+      <thead>
+        <tr>
+          <th>Sprint Date</th>
+          <th>BUG ID</th>
+          <th>Title</th>
+          <th>Status<br><small>(Dev In-progress or Completed)</small></th>
+          <th>Defect caused due to your changes? (Y/N)</th>
+          <th>Additional details<br><small>(if any)</small></th>
+        </tr>
+      </thead>
+      <tbody>${bugsRows || '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">No bugs added</td></tr>'}</tbody>
+    </table>
+  </div>
+</div>`;
+
+      document.getElementById('emailPreview').innerHTML = html;
+
+      // Store plain HTML for copy
+      window._emailHTML = generatePlainEmailHTML(s1, s2, stories, bugs, s1s, s1e, s2s, s2e);
+
+      // ── Auto-save to Excel & history ──────────────────────────────
+      const fileName = buildFileName(s2s, s2e, s1s, s1e);
+      exportToExcel(stories, bugs, s1, s2, s1s, s1e, s2s, s2e, fileName);
+
+      const historyEntry = {
+        id: Date.now().toString(),
+        fileName,
+        sprintLabel: [s1, s2].filter(Boolean).join(' · '),
+        generatedAt: new Date().toISOString(),
+        stories, bugs,
+        s1, s2, s1s, s1e, s2s, s2e
+      };
+      addHistoryEntry(historyEntry);
+      showToast(`Saved & downloaded: ${fileName}`, '💾');
+    }
+
+    function generatePlainEmailHTML(s1, s2, stories, bugs, s1s, s1e, s2s, s2e) {
+      const periods = [];
+      if (s1s && s1e) periods.push(fmtRange(s1s, s1e));
+      if (s2s && s2e) periods.push(fmtRange(s2s, s2e));
+      const introText = `Below are the details for the last 2 Sprints${periods.length ? ' (Period: ' + periods.join(' and ') + ')' : ''} as required.`;
+
+      const thStyle = "padding:9px 10px;background:#E8600A;color:#FFFFFF;text-align:left;border:1px solid #C0520A;font-family:'Palatino Linotype',Palatino,'Book Antiqua',serif;font-size:11pt;";
+      const tdStyle = "padding:8px 10px;border:1px solid #DDD;font-family:'Palatino Linotype',Palatino,'Book Antiqua',serif;font-size:11pt;color:rgb(31,73,125);vertical-align:top;";
+      const bodyFont = "font-family:'Palatino Linotype',Palatino,'Book Antiqua',serif;font-size:11pt;color:rgb(31,73,125);";
+
+      let storiesRows = stories.map(r => {
+        const spLabel = r.sprint == 0 ? s1 : s2;
+        return `<tr>
+        <td style="${tdStyle}">${spLabel}</td>
+        <td style="${tdStyle}">${r.pbiId}</td>
+        <td style="${tdStyle}">${r.title}</td>
+        <td style="${tdStyle}text-align:center;">${r.status}</td>
+        <td style="${tdStyle}text-align:center;">${r.planned}</td>
+        <td style="${tdStyle}text-align:center;">${r.delivered}</td>
+        <td style="${tdStyle}">${r.notes || ''}</td>
+      </tr>`;
+      }).join('');
+
+      let bugsRows = bugs.map(r => {
+        const spLabel = r.sprint == 0 ? s1 : s2;
+        return `<tr>
+        <td style="${tdStyle}">${spLabel}</td>
+        <td style="${tdStyle}">${r.bugId}</td>
+        <td style="${tdStyle}">${r.title}</td>
+        <td style="${tdStyle}text-align:center;">${r.status}</td>
+        <td style="${tdStyle}text-align:center;${r.defect === 'Y' ? 'color:#C0392B;font-weight:bold' : ''}">${r.defect}</td>
+        <td style="${tdStyle}">${r.notes || ''}</td>
+      </tr>`;
+      }).join('');
+
+      return `<p style="${bodyFont}">${introText}</p>
+<br>
+<p style="${bodyFont}"><strong><u>Stories Details:</u></strong></p>
+<table style="border-collapse:collapse;width:100%;font-family:Palatino Linotype,Palatino,Book Antiqua,serif;font-size:11pt;color:rgb(31,73,125);">
+  <thead><tr>
+    <th style="${thStyle}">Sprint Date</th>
+    <th style="${thStyle}">PBI ID</th>
+    <th style="${thStyle}">Title</th>
+    <th style="${thStyle}">Status (Dev In-progress or Completed)</th>
+    <th style="${thStyle}">Story Points (Planned)</th>
+    <th style="${thStyle}">Story Points (Delivered)</th>
+    <th style="${thStyle}">Additional details (if any)</th>
+  </tr></thead>
+  <tbody>${storiesRows}</tbody>
+</table>
+<br><br>
+<p style="${bodyFont}"><strong><u>Bug Details:</u></strong></p>
+<table style="border-collapse:collapse;width:100%;font-family:Palatino Linotype,Palatino,Book Antiqua,serif;font-size:11pt;color:rgb(31,73,125);">
+  <thead><tr>
+    <th style="${thStyle}">Sprint Date</th>
+    <th style="${thStyle}">BUG ID</th>
+    <th style="${thStyle}">Title</th>
+    <th style="${thStyle}">Status (Dev In-progress or Completed)</th>
+    <th style="${thStyle}">Defect caused due to your changes? (Y/N)</th>
+    <th style="${thStyle}">Additional details (if any)</th>
+  </tr></thead>
+  <tbody>${bugsRows}</tbody>
+</table>`;
+    }
+
+    async function copyEmail() {
+      if (!window._emailHTML) { alert('Please generate the email first!'); return; }
+      try {
+        const blob = new Blob([window._emailHTML], { type: 'text/html' });
+        const data = [new ClipboardItem({ 'text/html': blob })];
+        await navigator.clipboard.write(data);
+        const btn = document.getElementById('copyBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = '<span>✓</span> Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<span>📋</span> Copy Email';
+        }, 2200);
+      } catch (e) {
+        // Fallback: copy plain text
+        const range = document.createRange();
+        range.selectNode(document.getElementById('emailPreview'));
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        alert('Copied to clipboard (as text)!');
+      }
+    }
+
+    // Pre-populate with sample data
+    window.onload = () => {
+      renderHistory(); // load any previously saved exports
+      document.getElementById('s1start').value = '2026-04-08';
+      document.getElementById('s1end').value = '2026-04-21';
+      document.getElementById('s2start').value = '2026-04-22';
+      document.getElementById('s2end').value = '2026-05-05';
+
+      addStory();
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#storiesBody tr');
+        if (rows[0]) {
+          // rows[0].querySelector('[name=sprint]').value = '1';
+          // rows[0].querySelector('[name=pbiId]').value = 'PBI 337588';
+          // rows[0].querySelector('[name=title]').value = '[Pace] - Southern - Allow multiple document uploads from the CIP portal';
+          // rows[0].querySelector('[name=planned]').value = '2';
+          // rows[0].querySelector('[name=delivered]').value = '2';
+        }
+      }, 50);
+
+      addBug();
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#bugsBody tr');
+        if (rows[0]) {
+          // rows[0].querySelector('[name=sprint]').value = '0';
+          // rows[0].querySelector('[name=bugId]').value = 'Bug 340441';
+          // rows[0].querySelector('[name=title]').value = 'Aggregator Evidence API failure';
+          // rows[0].querySelector('[name=defect]').value = 'N';
+        }
+      }, 50);
+    };
+  </script>
+</body>
+
+</html>
